@@ -9,10 +9,22 @@ audit/*.jsonl
 # Business data / agent runtime state - never commit (invoices, customer data, agent memory)
 audit/
 scratch-incoming-review/
-workspace/
+workspace/*
+# ...except the agent's instruction files and skills (config, not data)
+!workspace/AGENTS.md
+!workspace/SOUL.md
+!workspace/IDENTITY.md
+!workspace/EXPERTISE.md
+!workspace/USER.md
+!workspace/skills/
 .playwright-mcp/
 *.pdf
 *.bak
 *.pathfix-*
 .claude/settings.local.json
 .claude/worktrees/
+
+# Token store lock / atomic-write temp files
+.env.lock
+.env.lock.stale-*
+.env.tmp-*
