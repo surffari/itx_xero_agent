@@ -1,0 +1,36 @@
+{
+  "name": "intactix-accounting-agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Independent self-developing Xero reconciliation agent for Intactix B.V.",
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "check": "tsc -p tsconfig.json --noEmit",
+    "cli": "node --import tsx src/cli.ts",
+    "migrate": "node --import tsx src/cli.ts migrate",
+    "sync:reference": "node --import tsx src/cli.ts sync reference",
+    "sync:incremental": "node --import tsx src/cli.ts sync incremental",
+    "mcp": "node --import tsx src/mcp/server.ts",
+    "test": "node --import tsx --test src/bills/account-code-guard.test.ts src/bills/routing.test.ts src/bills/contact-resolution-guard.test.ts src/bills/curo-document-guard.test.ts src/accounting/clearing.test.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "commander": "^12.1.0",
+    "dotenv": "^16.4.7",
+    "exceljs": "^4.4.0",
+    "imapflow": "^1.7.1",
+    "mailparser": "^3.9.15",
+    "mysql2": "^3.12.0",
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "@types/mailparser": "^3.4.6",
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.7.2"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

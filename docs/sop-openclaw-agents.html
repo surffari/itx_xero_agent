@@ -1,0 +1,200 @@
+<div data-type="panel-info"><p><strong>What this page is:</strong> how to work with, train and develop <em>any</em> of our OpenClaw AI agents. It is generic &mdash; nothing on this page is specific to one agent. For the agent you actually work with, read this page first, then its own page. Anything marked <span data-type="status" data-color="red">ADMIN</span> is not yours to change &mdash; ask.</p></div>
+
+<h2>1. What OpenClaw is</h2>
+
+<p>OpenClaw is the gateway that lets our AI agents live in chat. It runs on our own Raspberry Pi &mdash; not in the cloud &mdash; and does three things: it holds each agent&rsquo;s identity and memory, it connects agents to Slack, Telegram and (soon) WhatsApp, and it gives each agent a set of <strong>tools</strong> it is allowed to use.</p>
+
+<p>An agent is not a chatbot with a clever prompt. Each one is:</p>
+
+<table data-layout="default">
+<tbody>
+<tr><th><p>A project folder</p></th><td><p>Real code &mdash; the tools the agent can call, plus the database and scripts behind them</p></td></tr>
+<tr><th><p>A workspace</p></th><td><p>Its behaviour files, skills and memory &mdash; what it knows and how it decides</p></td></tr>
+<tr><th><p>Channel bindings</p></th><td><p>Which Slack channel or Telegram topic it listens in, and who is allowed to talk to it</p></td></tr>
+</tbody>
+</table>
+
+<p>Several agents run on the machine, each isolated from the others. You will normally be given access to exactly one. This page tells you how to work with it; its own page tells you what it is for.</p>
+
+<h2>2. Three surfaces &mdash; pick the right one</h2>
+
+<p>This is the single most important distinction on this page. Changing what an agent <em>can do</em> and changing what it <em>knows</em> are different jobs, done in different places.</p>
+
+<table data-layout="default">
+<thead><tr><th><p>Surface</p></th><th><p>Changes&hellip;</p></th><th><p>Typical work</p></th><th><p>Who</p></th></tr></thead>
+<tbody>
+<tr><td><p><strong>Claude Code</strong><br />at the agent&rsquo;s project root</p></td><td><p>What the agent <strong>CAN DO</strong> &mdash; its capabilities</p></td><td><p>Add or fix a tool, change a query, add a database table, fix a bug, write tests</p></td><td><p>VA (dev-capable) + Admin</p></td></tr>
+<tr><td><p><strong>Chat</strong><br />Telegram / Slack</p></td><td><p>What the agent <strong>KNOWS &amp; HOW IT DECIDES</strong></p></td><td><p>Teach a rule, correct a wrong conclusion, add domain knowledge, answer its open questions, refine a skill</p></td><td><p>VA + Admin</p></td></tr>
+<tr><td><p><strong>Gateway config</strong><br /><code>~/.openclaw/openclaw.json</code></p></td><td><p>Who can reach it, on which channel, with which tools</p></td><td><p>Add a person to Telegram, enable WhatsApp, change model, wire a new tool server</p></td><td><p><span data-type="status" data-color="red">ADMIN ONLY</span></p></td></tr>
+</tbody>
+</table>
+
+<p><strong>Rule of thumb:</strong> if the agent <em>tried and failed because a tool doesn&rsquo;t exist or is broken</em> &rarr; Claude Code. If the agent <em>had the tool but reached the wrong conclusion</em> &rarr; chat.</p>
+
+<div data-type="panel-warning"><p><strong>Never edit <code>~/.openclaw/openclaw.json</code>.</strong> One file defines <em>every</em> agent on the machine, and each agent&rsquo;s tool server is wired to it by absolute path. A bad edit takes down all of them at once, not just the one you were working on. If something needs changing there, raise it with the admin.</p></div>
+
+<h2>3. Channels &mdash; Slack, Telegram, WhatsApp</h2>
+
+<table data-layout="default">
+<thead><tr><th><p></p></th><th><p>Slack</p></th><th><p>Telegram</p></th></tr></thead>
+<tbody>
+<tr><td><p><strong>Best for</strong></p></td><td><p>Pulling info and intel. One-shot commands. Anything the team should be able to read back later.</p></td><td><p>Interactive back-and-forth. Training, correcting, iterating on a rule until it&rsquo;s right.</p></td></tr>
+<tr><td><p><strong>Shape of use</strong></p></td><td><p>&ldquo;Give me X&rdquo;, &ldquo;what&rsquo;s the status of Y&rdquo; &mdash; ask, get an answer, done</p></td><td><p>&ldquo;That&rsquo;s wrong, here&rsquo;s why&hellip;&rdquo; &mdash; a conversation that builds over many turns</p></td></tr>
+<tr><td><p><strong>Threads</strong></p></td><td><p>Yes &mdash; and a thread is its own separate conversation. Use them.</p></td><td><p>No real threading. A topic is one long conversation.</p></td></tr>
+<tr><td><p><strong>Commands</strong></p></td><td><p>Typed as ordinary text (no native slash menu)</p></td><td><p>Appear in the native slash menu as you type <code>/</code></p></td></tr>
+<tr><td><p><strong>Attachments</strong></p></td><td><p>Up to 20 MB, 8 files per message. PDFs land as file context; images are read visually.</p></td><td><p>Up to 100 MB. Photos, documents, voice notes (transcribed automatically).</p></td></tr>
+</tbody>
+</table>
+
+<p><strong>WhatsApp</strong> is planned but not connected to any agent yet. Don&rsquo;t promise it to anyone.</p>
+
+<div data-type="panel-warning"><p><strong>Being in the channel is not the same as having access.</strong> Telegram in particular has a second gate: being added to a group or topic lets you <em>see</em> the conversation, but a separate allowlist in the gateway config decides whether your messages are <em>processed</em>. Until an admin adds your user ID, the agent simply will not respond &mdash; and your messages and commands are dropped <strong>silently, with no error</strong>. If a channel feels dead, that is almost always why. Ask the admin; they can read your user ID off the group member list.</p></div>
+
+<h2>4. Commands</h2>
+
+<div data-type="panel-note"><p>A command must be the <strong>whole message</strong> to be treated as one &mdash; not tacked onto a sentence. There is <strong>no <code>/clear</code></strong>; that is the one everybody reaches for and it does not exist. Use <code>/new</code>.</p></div>
+
+<table data-layout="default">
+<thead><tr><th><p>Command</p></th><th><p>What it does</p></th><th><p>Use it when</p></th></tr></thead>
+<tbody>
+<tr><td><p><code>/new</code></p></td><td><p>Archives the conversation and starts fresh &mdash; no memory of what came before</p></td><td><p>Switching to an unrelated task. <strong>Your most-used command.</strong></p></td></tr>
+<tr><td><p><code>/compact</code></p></td><td><p>Summarises the conversation so far and keeps going</p></td><td><p>Long session, still relevant, agent getting slow or forgetful</p></td></tr>
+<tr><td><p><code>/reset soft</code></p></td><td><p>Restarts the session in place, keeps the transcript</p></td><td><p>Agent is behaving oddly but you don&rsquo;t want to lose context</p></td></tr>
+<tr><td><p><code>/stop</code></p></td><td><p>Aborts the run happening right now</p></td><td><p>It&rsquo;s off down the wrong path</p></td></tr>
+<tr><td><p><code>/steer &lt;text&gt;</code></p></td><td><p>Injects a correction into a run <em>without</em> stopping it</p></td><td><p>&ldquo;Also check the other account&rdquo; mid-task</p></td></tr>
+<tr><td><p><code>/status</code></p></td><td><p>Uptime, model, provider quota, how full the context is</p></td><td><p>Agent seems stuck or slow</p></td></tr>
+<tr><td><p><code>/context</code></p></td><td><p>Shows what&rsquo;s actually loaded in the conversation</p></td><td><p>&ldquo;Why doesn&rsquo;t it remember what I said?&rdquo;</p></td></tr>
+<tr><td><p><code>/tools</code></p></td><td><p>Lists the tools available right now</p></td><td><p>Checking a capability exists before asking for it</p></td></tr>
+<tr><td><p><code>/name &lt;title&gt;</code></p></td><td><p>Names the session</p></td><td><p>Long piece of work you&rsquo;ll come back to</p></td></tr>
+<tr><td><p><code>/btw &lt;question&gt;</code></p></td><td><p>Side question &mdash; answered using the conversation as background, but not saved into it</p></td><td><p>Quick sanity check without polluting the thread</p></td></tr>
+<tr><td><p><code>/export-session</code></p></td><td><p>Exports the conversation to HTML</p></td><td><p>Handover, or attaching evidence to a ticket</p></td></tr>
+<tr><td><p><code>/help</code> &middot; <code>/commands</code></p></td><td><p>Help summary / full command list</p></td><td><p>Anytime</p></td></tr>
+</tbody>
+</table>
+
+<details><summary>Less common, and the ones you cannot use</summary>
+<p><strong>Occasionally useful:</strong> <code>/think &lt;level&gt;</code> (more reasoning on a hard problem), <code>/model</code> (see or pin the model), <code>/models</code>, <code>/tasks</code>, <code>/goal</code>, <code>/whoami</code> (shows your user ID &mdash; note it only works once you already have access, so it can&rsquo;t be used to bootstrap it), <code>/usage</code>, <code>/skill &lt;name&gt;</code>.</p>
+<p><strong>Keep OFF in shared channels</strong> &mdash; they flood the channel: <code>/verbose</code>, <code>/trace</code>, <code>/reasoning</code>.</p>
+<p><strong>Owner-only</strong> &mdash; these will silently do nothing for you: <code>/config</code>, <code>/mcp</code>, <code>/plugins</code>, <code>/debug</code>, <code>/diagnostics</code>, <code>/restart</code>, <code>/bash</code>. Unauthorised commands are ignored without an error, so if a command seems to do nothing, that is usually why.</p>
+</details>
+
+<h2>5. Context and sessions</h2>
+
+<p>A &ldquo;session&rdquo; is one continuous conversation with its own memory. Where you type decides which session you land in &mdash; and therefore who you are sharing a brain with.</p>
+
+<table data-layout="default">
+<thead><tr><th><p>Where you type</p></th><th><p>Session behaviour</p></th></tr></thead>
+<tbody>
+<tr><td><p>A Telegram topic</p></td><td><p><strong>One session shared by everyone in the topic</strong></p></td></tr>
+<tr><td><p>A Slack channel, top level</p></td><td><p><strong>One session shared by the whole channel</strong></p></td></tr>
+<tr><td><p>A Slack <strong>thread</strong></p></td><td><p>Its own separate session, seeded with the last ~20 messages of that thread</p></td></tr>
+<tr><td><p>Every day at 04:00</p></td><td><p>Sessions reset automatically &mdash; a morning question starts clean</p></td></tr>
+</tbody>
+</table>
+
+<div data-type="panel-warning"><p><strong>A shared channel is one shared brain.</strong> Everyone posting in the same channel or topic is in the <em>same</em> conversation with the same memory. If two people work different problems at once, they will confuse each other and the agent. Coordinate, or take the second piece of work into a Slack thread.</p></div>
+
+<p>Practical habits:</p>
+<ul>
+<li><p><strong>One task per session.</strong> Two unrelated jobs in one conversation makes the agent worse at both.</p></li>
+<li><p><strong>Use Slack threads to work in parallel.</strong> A thread is effectively a private workspace.</p></li>
+<li><p><strong>When it starts forgetting, don&rsquo;t repeat yourself &mdash; <code>/compact</code>.</strong> The agent summarises itself and carries on.</p></li>
+<li><p><strong>Don&rsquo;t rely on chat as memory.</strong> Anything that must survive belongs in a skill or a knowledge file. Ask the agent to write it down.</p></li>
+<li><p>Compaction also happens automatically and silently near the context limit. Nothing is lost from disk &mdash; only from what the agent is holding in mind.</p></li>
+</ul>
+
+<h2>6. Training an agent</h2>
+
+<p>Training happens in chat, and Telegram is the better surface for it. The goal is never to win one argument with the agent &mdash; it is to leave behind a written rule that survives the next reset.</p>
+
+<ol>
+<li><p><strong>Show it the case.</strong> Point at something specific &mdash; a reference number, an ID, a date &mdash; not a vague description.</p></li>
+<li><p><strong>Ask for its reasoning before you correct it:</strong> &ldquo;why did you conclude that?&rdquo; Often the data is wrong, not the logic, and the fix is somewhere else entirely.</p></li>
+<li><p><strong>Give the rule, not just the answer.</strong> &ldquo;This one is wrong&rdquo; teaches nothing. &ldquo;Whenever X happens, do Y, because Z&rdquo; teaches a rule.</p></li>
+<li><p><strong>Ask it to write the rule down</strong> &mdash; into a skill or a knowledge file, as a <em>proposal</em>.</p></li>
+<li><p><strong>Test it.</strong> Ask the agent to apply the new rule to two or three other cases and show its working.</p></li>
+<li><p><strong>Hand to admin</strong> for approval.</p></li>
+</ol>
+
+<p>There are three layers you can propose changes to, in rising order of risk:</p>
+
+<table data-layout="default">
+<tbody>
+<tr><td><p><span data-type="status" data-color="green">LOWEST RISK</span></p></td><td><p><strong>Skills &amp; knowledge</strong> &mdash; how it handles a particular supplier, customer or case type</p></td></tr>
+<tr><td><p><span data-type="status" data-color="yellow">MEDIUM</span></p></td><td><p><strong>Answers to its decision queue</strong> &mdash; supplying facts it asked for. Safe work, and genuinely useful.</p></td></tr>
+<tr><td><p><span data-type="status" data-color="red">HIGHEST</span></p></td><td><p><strong>Core behaviour files</strong> (<code>AGENTS.md</code>, <code>IDENTITY.md</code>, <code>EXPERTISE.md</code>) &mdash; red lines, reporting style, domain maps. Propose, never apply.</p></td></tr>
+</tbody>
+</table>
+
+<h2>7. Propose, don&rsquo;t apply</h2>
+
+<div data-type="panel-warning"><p><strong>Assume the agent will do what you ask.</strong> If an agent has write access to a real system, nothing in the software stops a VA from triggering a real change. The boundary below is a <strong>rule you follow</strong>, not a lock on the door.</p></div>
+
+<ol>
+<li><p><strong>Ask for a dry run first.</strong> Write tools default to <code>dry_run=true</code>. Say &ldquo;show me the dry run&rdquo; and read the output before anything else happens.</p></li>
+<li><p><strong>Say the words.</strong> Open the task with &ldquo;<em>propose only, do not apply</em>&rdquo;. Our agents are instructed to treat that as binding for the rest of the session: they will refuse applying tools and tell you what they <em>would</em> have done.</p></li>
+<li><p><strong>Let it write proposals to file</strong> &mdash; the pattern is a section headed <code># Proposed update:</code> inside the relevant file. Admin reviews and merges.</p></li>
+<li><p><strong>Never</strong> ask an agent to apply proposals, approve anything, or flip a rule live. That is the admin&rsquo;s call.</p></li>
+</ol>
+
+<div data-type="panel-note"><p><strong>Approval prompts you may not be able to clear.</strong> Some changes &mdash; particularly to an agent&rsquo;s own configuration and rules &mdash; raise an approval prompt that must be <strong>tapped in the owner&rsquo;s main Telegram chat</strong>. VAs do not have that chat, and may not have approval rights at all. <strong>If an agent goes quiet and seems to be waiting for something, this is the most likely reason &mdash; ping the admin rather than retrying.</strong> Exactly which actions trigger it for a VA account is worked out per person during onboarding.</p></div>
+
+<h2>8. Developing with Claude Code</h2>
+
+<p>Point Claude Code at the <strong>agent&rsquo;s project root</strong> &mdash; the folder holding its code. Not at <code>workspace/</code> on its own, and not at your home directory.</p>
+
+<pre><code class="language-bash">cd /path/to/the/agent/project
+claude</code></pre>
+
+<p>Each agent repo carries its own <code>CLAUDE.md</code> with the rules for that project. Claude Code picks it up automatically &mdash; you don&rsquo;t need to paste instructions.</p>
+
+<h3>Green &mdash; go ahead</h3>
+<ul>
+<li><p><code>src/</code> &mdash; the tools and logic</p></li>
+<li><p><code>migrations/</code> &mdash; database schema changes</p></li>
+<li><p><code>scripts/</code>, <code>knowledge/</code>, <code>workspace/skills/</code>, planning docs</p></li>
+</ul>
+
+<h3>Red &mdash; stop and ask</h3>
+<ul>
+<li><p><code>.env</code> and <code>.keys/</code> &mdash; live credentials, and owner-only on disk anyway</p></li>
+<li><p><code>~/.openclaw/openclaw.json</code> &mdash; gateway config, outside every repo</p></li>
+<li><p>Anything that performs a <strong>real write against a live external system</strong> outside <code>dry_run</code></p></li>
+<li><p>Anything under <code>/var/www/</code> or a production database</p></li>
+</ul>
+
+<div data-type="panel-note"><p><strong>You will not be able to run everything.</strong> Reading, editing, <code>git</code> and type-checking work under your own login. But most of these projects validate their credentials at startup, so <strong>anything that actually executes</strong> &mdash; the tool server, sync scripts, most tests &mdash; will fail without <code>.env</code>, which you don&rsquo;t have. Write and type-check your change, then ask the admin to run it.</p></div>
+
+<h2>9. Escalate to admin when</h2>
+
+<ul data-type="task-list">
+<li data-type="task-item"><input type="checkbox" /> A real write needs to actually happen in a live system</li>
+<li data-type="task-item"><input type="checkbox" /> The agent appears to be waiting on an approval you can&rsquo;t give</li>
+<li data-type="task-item"><input type="checkbox" /> A sync or job fails twice in a row, or reports credential / permission errors</li>
+<li data-type="task-item"><input type="checkbox" /> You believe a red line in <code>AGENTS.md</code> is wrong or out of date</li>
+<li data-type="task-item"><input type="checkbox" /> Anything involving <code>.env</code>, credentials, or <code>openclaw.json</code></li>
+<li data-type="task-item"><input type="checkbox" /> The agent stops responding on a channel entirely</li>
+<li data-type="task-item"><input type="checkbox" /> You need access to a channel, a Pi login, or a new agent</li>
+</ul>
+
+<h2>10. The short version</h2>
+
+<table data-layout="default">
+<tbody>
+<tr><td><p><strong>Capability broken?</strong></p></td><td><p>Claude Code, at the project root</p></td></tr>
+<tr><td><p><strong>Judgement wrong?</strong></p></td><td><p>Chat &mdash; teach the rule, get it written down</p></td></tr>
+<tr><td><p><strong>Access or routing?</strong></p></td><td><p>Admin. Never touch <code>openclaw.json</code>.</p></td></tr>
+<tr><td><p><strong>New topic?</strong></p></td><td><p><code>/new</code>. Not <code>/clear</code> &mdash; it doesn&rsquo;t exist.</p></td></tr>
+<tr><td><p><strong>Losing the plot?</strong></p></td><td><p><code>/compact</code></p></td></tr>
+<tr><td><p><strong>About to change something real?</strong></p></td><td><p>&ldquo;Propose only, do not apply.&rdquo; Then hand to admin.</p></td></tr>
+</tbody>
+</table>
+
+<h2>Agent pages</h2>
+
+<ul>
+<li><p><a href="https://thewmt.atlassian.net/wiki/spaces/TG/pages/3740368897/Xero+Agent">Xero Agent</a> &mdash; Intactix B.V. accounting and reconciliation</p></li>
+</ul>
+
+<hr />
+<p><em>Source of this page is version-controlled at <code>/opt/projects/openclaw/gopure/intactix/docs/sop-openclaw-agents.html</code>. Edit there and republish rather than editing Confluence directly, so the two don&rsquo;t drift.</em></p>

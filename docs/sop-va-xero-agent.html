@@ -1,0 +1,138 @@
+<div data-type="panel-info"><p><strong>Read <a href="https://thewmt.atlassian.net/wiki/spaces/TG/pages/3740598285/AI+Agents+OpenClaw">AI Agents (OpenClaw)</a> first.</strong> That page covers how to talk to an agent, the commands, sessions and context, the training loop, and the propose-don&rsquo;t-apply rule &mdash; all of which apply here and are not repeated. <strong>This page is only what is specific to the Xero Agent.</strong> Anything marked <span data-type="status" data-color="red">ADMIN</span> is not yours to change &mdash; ask.</p></div>
+
+<h2>1. What the agent does</h2>
+
+<p>The Xero Agent (&ldquo;Intactix&rdquo;) is an autonomous accounting assistant for <strong>Intactix B.V.</strong>, the GoPure EU entity. It keeps a local copy of the Xero ledger in sync, reconciles it against PrestaShop orders and bank/payment feeds, and surfaces the exceptions a human has to decide on.</p>
+
+<table data-layout="default">
+<tbody>
+<tr><th><p>Entity</p></th><td><p>Intactix B.V. (GoPure EU) &mdash; Xero + NL Belastingdienst VAT</p></td></tr>
+<tr><th><p>Core job</p></th><td><p>Reconcile Xero sales invoices &harr; PrestaShop orders; match supplier bills &harr; bank spend &harr; Xero inbox receipts; produce quarterly VAT inputs</p></td></tr>
+<tr><th><p>Data it reads</p></th><td><p>Xero API, PrestaShop GP EU (read-only BI replica), Wise, Revolut, Xero Inbox files</p></td></tr>
+<tr><th><p>Write posture</p></th><td><p><span data-type="status" data-color="yellow">WRITES ENABLED</span> &mdash; but <strong>draft-first, always</strong>. It creates drafts; a human posts them in Xero. See section 5.</p></td></tr>
+</tbody>
+</table>
+
+<h2>2. Where it lives</h2>
+
+<table data-layout="default">
+<thead><tr><th><p>Thing</p></th><th><p>Path</p></th><th><p>Who touches it</p></th></tr></thead>
+<tbody>
+<tr><td><p><strong>Project root</strong> (code, tools, DB migrations)</p></td><td><p><code>/opt/projects/openclaw/gopure/intactix</code></p></td><td><p>VA + Admin</p></td></tr>
+<tr><td><p><strong>Agent workspace</strong> (behaviour, skills, memory)</p></td><td><p><code>&hellip;/intactix_accounting_agent/workspace/</code></p></td><td><p>VA + Admin</p></td></tr>
+<tr><td><p><strong>Knowledge base</strong> (durable accounting facts)</p></td><td><p><code>&hellip;/intactix_accounting_agent/knowledge/</code></p></td><td><p>VA + Admin</p></td></tr>
+<tr><td><p><strong>Tool server</strong> (what the agent <em>can</em> do)</p></td><td><p><code>&hellip;/intactix_accounting_agent/src/mcp/server.ts</code></p></td><td><p>VA + Admin</p></td></tr>
+<tr><td><p><strong>Secrets</strong> (API keys, DB passwords)</p></td><td><p><code>.env</code>, <code>.keys/</code></p></td><td><p><span data-type="status" data-color="red">ADMIN</span> &mdash; owner-only on disk</p></td></tr>
+</tbody>
+</table>
+
+<div data-type="panel-note"><p><strong>Access:</strong> the whole project is readable and writable by the <code>gopure</code> group, so you can work under your own login once the admin has given you a Pi account and added you to that group. <code>.env</code>, <code>.keys/</code> and the Revolut token cache are deliberately owner-only.</p></div>
+
+<h2>3. Its channels</h2>
+
+<table data-layout="default">
+<thead><tr><th><p>Channel</p></th><th><p>Status</p></th><th><p>Notes</p></th></tr></thead>
+<tbody>
+<tr><td><p>Slack <code>#accounting</code></p></td><td><p><span data-type="status" data-color="green">LIVE</span></p></td><td><p>Works today for everyone in the channel. No mention needed &mdash; it reads every message. Best for pulling status and intel: &ldquo;Q2 reconciliation status&rdquo;, &ldquo;list unmatched supplier payments over &euro;500&rdquo;, &ldquo;what&rsquo;s in the Xero inbox&rdquo;.</p></td></tr>
+<tr><td><p>Telegram &mdash; Xero Agent topic</p></td><td><p><span data-type="status" data-color="yellow">PENDING PER USER</span></p></td><td><p>Best for training and correcting. No mention needed inside the topic. <strong>But see the warning below before you assume it is broken.</strong></p></td></tr>
+<tr><td><p>WhatsApp</p></td><td><p><span data-type="status" data-color="neutral">NOT CONNECTED</span></p></td><td><p>Planned. Don&rsquo;t promise it to anyone.</p></td></tr>
+</tbody>
+</table>
+
+<div data-type="panel-warning"><p><strong>Telegram needs a second step beyond being added to the topic.</strong> Being in the topic lets you <em>see</em> the conversation; a separate allowlist decides whether your messages are <em>processed</em>. Until the admin adds your Telegram user ID, the agent will not respond &mdash; and commands are dropped <strong>silently, with no error</strong>. If Telegram feels dead, you are almost certainly not on the allowlist yet. Ask the admin.</p></div>
+
+<h3>What is worth training it on</h3>
+
+<p>Follow the training loop on the <a href="https://thewmt.atlassian.net/wiki/spaces/TG/pages/3740598285/AI+Agents+OpenClaw">OpenClaw page</a>. For this agent, the high-value material is:</p>
+
+<ul>
+<li><p><strong>Supplier behaviour</strong> &mdash; &ldquo;when Paulo invoices in USD but we pay in EUR from Wise, subtract the card fee and book the net&rdquo;</p></li>
+<li><p><strong>Bad matches</strong> &mdash; point at the reference, ask <em>why</em> it matched, then give the rule that would have prevented it</p></li>
+<li><p><strong>Its decision queue</strong> &mdash; when it can&rsquo;t decide, it logs the item, the candidates and what&rsquo;s missing. Answering those is safe, legitimate VA work: you are supplying facts, not posting to Xero.</p></li>
+</ul>
+
+<h2>4. Developing this repo with Claude Code</h2>
+
+<pre><code class="language-bash">cd /opt/projects/openclaw/gopure/intactix
+claude</code></pre>
+
+<p>The repo has its own <code>CLAUDE.md</code> setting the rules for this project &mdash; full autonomy inside the repo, no destructive actions outside it. Claude Code picks that up automatically.</p>
+
+<table data-layout="default">
+<tbody>
+<tr><td><p><span data-type="status" data-color="green">GREEN</span></p></td><td><p><code>src/</code> (tools, sync clients, reconciliation and VAT logic) &middot; <code>migrations/</code> (tables and columns in <code>intactix_agent_db</code>) &middot; <code>scripts/</code> &middot; <code>knowledge/</code> &middot; <code>workspace/skills/</code> &middot; <code>PLAN.md</code></p></td></tr>
+<tr><td><p><span data-type="status" data-color="red">RED</span></p></td><td><p><code>.env</code> / <code>.keys/</code> (live Xero, MySQL, Wise, Revolut and Slack credentials) &middot; <code>~/.openclaw/openclaw.json</code> &middot; anything performing a real Xero write outside <code>dry_run</code> &middot; anything in <code>/var/www/</code> or the live PrestaShop databases</p></td></tr>
+</tbody>
+</table>
+
+<div data-type="panel-note"><p><strong>What you can actually run.</strong> Reading, editing, <code>git</code> and type-checking (<code>npx tsc --noEmit</code>) all work. But <code>src/config.ts</code> validates the environment the moment it is imported and requires <code>MYSQL_PASSWORD</code> and <code>PS_BI_PASSWORD</code>, so <strong>anything that executes</strong> &mdash; the MCP server, the sync scripts, most tests &mdash; throws a validation error without <code>.env</code>. Write and type-check your change, then ask the admin to run it. (A scoped <code>.env</code> for VAs is on the open items list.)</p></div>
+
+<h2>5. Xero writes and approvals</h2>
+
+<div data-type="panel-warning"><p><strong>Xero writes are LIVE.</strong> The agent can create draft invoices, create bills, attach documents and modify contacts in the <em>real</em> Xero organisation, and it will do so if you ask. Nothing in the software stops a VA from triggering a write.</p></div>
+
+<p>On top of the generic propose-don&rsquo;t-apply rule, this agent has hard red lines written into its own instructions:</p>
+
+<ul>
+<li><p>Every write tool is run with <code>dry_run=true</code> first, and the dry run shown to a human, before anything real happens. Say &ldquo;<em>show me the dry run</em>&rdquo;.</p></li>
+<li><p>Everything it creates in Xero is a <strong>DRAFT</strong>. It will never post, approve or authorise an invoice or a bill. A human does that in Xero.</p></li>
+<li><p>Say &ldquo;<em>propose only, do not apply</em>&rdquo; and it holds for the rest of the session &mdash; it will refuse applying tools and tell you what it <em>would</em> have applied instead.</p></li>
+<li><p>It is instructed to assume anyone in <code>#accounting</code> or the Telegram topic may be a VA without approval authority, and to ask for confirmation rather than apply.</p></li>
+<li><p>It will never run SQL that modifies data.</p></li>
+</ul>
+
+<p><strong>Never</strong> ask it to apply proposals, post or approve invoices, or flip a rule live. That is the admin&rsquo;s call.</p>
+
+<h2>6. What it can and can&rsquo;t do</h2>
+
+<h3><span data-type="status" data-color="green">CAN</span></h3>
+<table data-layout="default">
+<tbody>
+<tr><td><p><strong>Sync &amp; query</strong></p></td><td><p>Pull Xero, PrestaShop, Wise and Revolut data into its local warehouse; run read-only SQL across all of it; check how fresh the data is</p></td></tr>
+<tr><td><p><strong>Reconcile</strong></p></td><td><p>Run a full period reconciliation, match Xero sales invoices to PS orders, list orphans and exceptions, explain <em>why</em> a given item didn&rsquo;t match</p></td></tr>
+<tr><td><p><strong>Investigate</strong></p></td><td><p>Trace a bank line to a supplier bill to a receipt; find the PS order behind a Xero reference; spot missing supplier receipts; audit the Xero inbox</p></td></tr>
+<tr><td><p><strong>Draft</strong></p></td><td><p>Create <em>draft</em> sales invoices from PS orphans, create bills from inbox files, attach PDFs to invoices &mdash; dry run first, every time</p></td></tr>
+<tr><td><p><strong>Learn</strong></p></td><td><p>Propose coding rules, test a rule against history before it&rsquo;s trusted, build supplier profiles, backtest the invoice builder</p></td></tr>
+<tr><td><p><strong>Report</strong></p></td><td><p>Produce NL quarterly VAT inputs, audit VAT rates by country, export unmatched transactions to Excel</p></td></tr>
+</tbody>
+</table>
+
+<h3><span data-type="status" data-color="red">CANNOT</span></h3>
+<table data-layout="default">
+<tbody>
+<tr><td><p><strong>Post or approve anything</strong></p></td><td><p>Everything it creates is a draft. A human posts it in Xero. It has no authorisation rights.</p></td></tr>
+<tr><td><p><strong>Reconcile bank lines in Xero</strong></p></td><td><p>It has read-only access to bank transactions. Matching in the Xero bank feed is done by a human.</p></td></tr>
+<tr><td><p><strong>Move money</strong></p></td><td><p>It has no payment or transfer tool at all &mdash; its Wise and Revolut tools only fetch activity into the warehouse. There is nothing to ask it for.</p></td></tr>
+<tr><td><p><strong>Change PrestaShop</strong></p></td><td><p>Its PrestaShop tools only read (the BI replica and order lookups), and it refuses SQL that modifies data. It cannot edit an order.</p></td></tr>
+<tr><td><p><strong>Invent an FX rate</strong></p></td><td><p>GBP orders are always flagged for a human to confirm the EUR amount. It will not guess.</p></td></tr>
+<tr><td><p><strong>Guess a tax treatment</strong></p></td><td><p>If a ship-to country isn&rsquo;t in its verified country&rarr;tax-type map, it stops and asks. By design.</p></td></tr>
+<tr><td><p><strong>File the VAT return</strong></p></td><td><p>It produces the inputs. A human files with the Belastingdienst.</p></td></tr>
+</tbody>
+</table>
+
+<h2>7. Escalate to admin when</h2>
+
+<p>The generic list is on the <a href="https://thewmt.atlassian.net/wiki/spaces/TG/pages/3740598285/AI+Agents+OpenClaw">OpenClaw page</a>. On top of it, for this agent:</p>
+
+<ul data-type="task-list">
+<li data-type="task-item"><input type="checkbox" /> A Xero write needs to actually happen &mdash; posting, approving, applying proposals</li>
+<li data-type="task-item"><input type="checkbox" /> A number doesn&rsquo;t reconcile against Xero and you can&rsquo;t explain the gap</li>
+<li data-type="task-item"><input type="checkbox" /> A sync reports a Xero scope or token error</li>
+<li data-type="task-item"><input type="checkbox" /> Anything touching the live PrestaShop database or <code>/var/www/</code></li>
+</ul>
+
+<h2>8. Open items <span data-type="status" data-color="red">ADMIN</span></h2>
+
+<ul data-type="task-list">
+<li data-type="task-item"><input type="checkbox" checked="checked" /> <s>Grant the <code>gopure</code> group access to the project so VAs can use Claude Code under their own account</s> &mdash; done 2026-08-16. Whole tree is now <code>gopure</code>-group read/write with setgid inheritance; <code>.env</code>, <code>.keys/</code> and the Revolut token cache remain owner-only. This deliberately crosses the <code>surffari</code>/<code>gopure</code> boundary documented in <code>AGENTS_INDEX.md</code>: anyone in <code>gopure</code> can now read Intactix accounting data.</li>
+<li data-type="task-item"><input type="checkbox" /> Create a Pi user account for each VA and add them to the <code>gopure</code> group &mdash; the group permissions above do nothing until this is done</li>
+<li data-type="task-item"><input type="checkbox" /> Add each VA&rsquo;s Telegram user ID to <code>allowFrom</code> and <code>groupAllowFrom</code>, and decide whether they go in <code>commands.ownerAllowFrom</code>. Until then Telegram is dead for them, silently &mdash; flip section 3 to LIVE once done</li>
+<li data-type="task-item"><input type="checkbox" /> Provide a scoped <code>.env</code> for VA development: read-only DB user, no Xero / Wise / Revolut / Slack tokens, so the codebase at least boots under a VA login</li>
+<li data-type="task-item"><input type="checkbox" /> Test which actions raise an owner-approval prompt for a VA account, and document the outcome</li>
+<li data-type="task-item"><input type="checkbox" /> Decide whether propose-only should be technically enforced rather than honour-system</li>
+<li data-type="task-item"><input type="checkbox" checked="checked" /> <s>Fix the stale &ldquo;no Xero writes until write scope is granted&rdquo; red line in <code>workspace/AGENTS.md</code></s> &mdash; done 2026-08-16. Replaced with binding draft-first / propose-only / never-post red lines, so section 5&rsquo;s promises are enforced by the agent&rsquo;s own instructions rather than convention.</li>
+<li data-type="task-item"><input type="checkbox" /> Connect WhatsApp and add it to section 3</li>
+</ul>
+
+<hr />
+<p><em>Source of this page is version-controlled at <code>/opt/projects/openclaw/gopure/intactix/docs/sop-va-xero-agent.html</code>. Edit there and republish rather than editing Confluence directly, so the two don&rsquo;t drift.</em></p>
