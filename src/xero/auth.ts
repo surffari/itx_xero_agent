@@ -2,7 +2,7 @@ import http from "node:http";
 import readline from "node:readline";
 import { randomBytes } from "node:crypto";
 import { config } from "../config.js";
-import { updateDotEnv } from "../lib/envFile.js";
+import { DEFAULT_ENV_PATH, updateDotEnv, withEnvLock } from "../lib/envFile.js";
 
 type AnyRecord = Record<string, any>;
 
@@ -34,7 +34,13 @@ export async function runXeroAuthFlow(
   if (options.printUrlOnly) return;
 
   let code: string;
-  if (options.manual) {
+  // The local callback server is plain HTTP and cannot answer an https:// redirect (and port 443
+  // needs root), so an https redirect URI always uses the paste-the-URL flow.
+  const manual = options.manual || new URL(redirectUri).protocol === "https:";
+  if (manual && !options.manual) {
+    console.log(`Redirect URI ${redirectUri} is https: using the manual flow (same as --manual).`);
+  }
+  if (manual) {
     code = await promptForCode(redirectUri, state);
   } else {
     const redirect = new URL(redirectUri);
@@ -44,13 +50,17 @@ export async function runXeroAuthFlow(
   }
 
   const token = await exchangeCodeForToken(code, redirectUri);
-  await updateDotEnv({
-    XERO_REDIRECT_URI: options.redirectUri,
-    XERO_REFRESH_TOKEN: token.refresh_token,
-    XERO_TENANT_ID: await maybeResolveSingleTenantId(token.access_token)
-  });
+  const tenantId = await maybeResolveSingleTenantId(token.access_token);
+  // Same lock as the token store, so a running refresh cannot overwrite the new token.
+  await withEnvLock(() =>
+    updateDotEnv({
+      XERO_REDIRECT_URI: options.redirectUri,
+      XERO_REFRESH_TOKEN: token.refresh_token,
+      XERO_TENANT_ID: tenantId
+    })
+  );
 
-  console.log("Xero refresh token saved to .env.");
+  console.log(`Xero refresh token saved to ${DEFAULT_ENV_PATH}.`);
   if (!token.refresh_token) {
     console.warn("Xero did not return a refresh token. Confirm the authorization URL included offline_access.");
   }

@@ -12,7 +12,7 @@
     "sync:reference": "node --import tsx src/cli.ts sync reference",
     "sync:incremental": "node --import tsx src/cli.ts sync incremental",
     "mcp": "node --import tsx src/mcp/server.ts",
-    "test": "node --import tsx --test src/bills/account-code-guard.test.ts src/bills/routing.test.ts src/bills/contact-resolution-guard.test.ts src/bills/curo-document-guard.test.ts src/accounting/clearing.test.ts"
+    "test": "node --import tsx --test src/bills/account-code-guard.test.ts src/bills/routing.test.ts src/bills/contact-resolution-guard.test.ts src/bills/curo-document-guard.test.ts src/accounting/clearing.test.ts src/xero/token-store.test.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

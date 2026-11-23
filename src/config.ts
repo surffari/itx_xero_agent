@@ -72,8 +72,7 @@ export function requireMailboxConfig() {
 export function requireXeroConfig() {
   const missing = [
     ["XERO_CLIENT_ID", config.XERO_CLIENT_ID],
-    ["XERO_CLIENT_SECRET", config.XERO_CLIENT_SECRET],
-    ["XERO_REFRESH_TOKEN", config.XERO_REFRESH_TOKEN]
+    ["XERO_CLIENT_SECRET", config.XERO_CLIENT_SECRET]
   ]
     .filter(([, value]) => !value)
     .map(([key]) => key);
@@ -85,7 +84,6 @@ export function requireXeroConfig() {
   return {
     clientId: config.XERO_CLIENT_ID!,
     clientSecret: config.XERO_CLIENT_SECRET!,
-    refreshToken: config.XERO_REFRESH_TOKEN!,
     tenantId: config.XERO_TENANT_ID || undefined
   };
 }

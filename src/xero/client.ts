@@ -1,18 +1,11 @@
 import { setTimeout as delay } from "node:timers/promises";
-import { config, requireXeroConfig } from "../config.js";
-import { updateDotEnv } from "../lib/envFile.js";
+import { config } from "../config.js";
+import { getXeroAccessToken } from "./token-store.js";
 
 type AnyRecord = Record<string, any>;
 
-interface TokenState {
-  accessToken: string;
-  refreshToken: string;
-  expiresAt: number;
-}
 
 export class XeroClient {
-  private token: TokenState | null = null;
-  private readonly credentials = requireXeroConfig();
 
   async getTenants(): Promise<AnyRecord[]> {
     const token = await this.getAccessToken();
@@ -97,36 +90,8 @@ export class XeroClient {
   }
 
   private async getAccessToken(): Promise<string> {
-    if (this.token && this.token.expiresAt > Date.now() + 60_000) {
-      return this.token.accessToken;
-    }
-
-    const body = new URLSearchParams({
-      grant_type: "refresh_token",
-      refresh_token: this.token?.refreshToken ?? this.credentials.refreshToken
-    });
-    const basic = Buffer.from(`${this.credentials.clientId}:${this.credentials.clientSecret}`).toString("base64");
-    const response = await fetch("https://identity.xero.com/connect/token", {
-      method: "POST",
-      headers: {
-        Authorization: `Basic ${basic}`,
-        "Content-Type": "application/x-www-form-urlencoded"
-      },
-      body
-    });
-    const token = await this.parseResponse<AnyRecord>(response, "token");
-    this.token = {
-      accessToken: token.access_token,
-      refreshToken: token.refresh_token ?? this.credentials.refreshToken,
-      expiresAt: Date.now() + Number(token.expires_in ?? 1800) * 1000
-    };
-
-    if (token.refresh_token && token.refresh_token !== this.credentials.refreshToken) {
-      await updateDotEnv({ XERO_REFRESH_TOKEN: token.refresh_token });
-      this.credentials.refreshToken = token.refresh_token;
-      console.warn("Xero returned a rotated refresh token. XERO_REFRESH_TOKEN was updated in .env.");
-    }
-    return this.token.accessToken;
+    // Shared, disk-backed token store: see token-store.ts for why clients must not keep their own copy.
+    return getXeroAccessToken();
   }
 
   private async parseResponse<T>(response: Response, label: string): Promise<T> {
